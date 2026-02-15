@@ -1,0 +1,60 @@
+COMPREHENSIVE METABOLIC & NUTRITIONAL PANEL
+============================================
+Patient: Demo User
+Date of Collection: January 28, 2025
+Ordering Physician: Dr. Sarah Mitchell, MD
+Lab: HealthFirst Diagnostics, Amsterdam
+
+VITAMIN & MINERAL LEVELS
+-------------------------
+Vitamin D (25-OH)        : 14 ng/mL       (LOW)     Reference: 30-100 ng/mL
+Vitamin B12              : 165 pg/mL      (LOW)     Reference: 200-900 pg/mL
+Iron / Ferritin          : 8 ng/mL        (LOW)     Reference: 12-150 ng/mL
+Folate (Vitamin B9)      : 4.8 ng/mL      (Normal)  Reference: 2.7-17.0 ng/mL
+Magnesium                : 1.8 mg/dL      (Low-Normal) Reference: 1.7-2.2 mg/dL
+Calcium                  : 9.2 mg/dL      (Normal)  Reference: 8.5-10.5 mg/dL
+Zinc                     : 58 mcg/dL      (LOW)     Reference: 60-120 mcg/dL
+Vitamin C                : 0.4 mg/dL      (Low-Normal) Reference: 0.4-2.0 mg/dL
+Vitamin A (Retinol)      : 42 mcg/dL      (Normal)  Reference: 30-65 mcg/dL
+Selenium                 : 85 mcg/L       (Normal)  Reference: 70-150 mcg/L
+
+COMPLETE BLOOD COUNT (CBC)
+--------------------------
+Hemoglobin               : 11.8 g/dL      (LOW)     Reference: 12.0-16.0 g/dL
+Hematocrit               : 35.2%          (LOW)     Reference: 36-46%
+Red Blood Cells (RBC)    : 3.9 M/uL       (Low-Normal) Reference: 3.8-5.1 M/uL
+MCV                      : 78 fL          (LOW)     Reference: 80-100 fL
+White Blood Cells (WBC)  : 6.2 K/uL       (Normal)  Reference: 4.0-11.0 K/uL
+
+METABOLIC PANEL
+---------------
+Glucose (fasting)        : 92 mg/dL       (Normal)  Reference: 70-100 mg/dL
+Total Cholesterol        : 218 mg/dL      (Borderline High) Reference: <200 mg/dL
+LDL Cholesterol          : 142 mg/dL      (Borderline High) Reference: <130 mg/dL
+HDL Cholesterol          : 48 mg/dL       (Low-Normal) Reference: >40 mg/dL
+Triglycerides            : 155 mg/dL      (Borderline High) Reference: <150 mg/dL
+
+THYROID
+-------
+TSH                      : 3.8 mIU/L      (Normal)  Reference: 0.4-4.0 mIU/L
+
+PHYSICIAN NOTES
+---------------
+Patient presents with fatigue, occasional muscle cramps, and difficulty
+concentrating. Dietary history indicates limited red meat intake and
+minimal sun exposure due to indoor work schedule.
+
+Key findings:
+- Significant Vitamin D deficiency (14 ng/mL) - likely contributing to fatigue
+- Vitamin B12 below normal range - may explain concentration difficulties
+- Low ferritin with mildly low hemoglobin and low MCV - suggestive of
+  early iron-deficiency anemia
+- Zinc marginally below reference range
+- Borderline lipid panel - monitor and consider dietary modifications
+- Magnesium and Vitamin C at lower end of normal - may benefit from
+  supplementation given symptoms
+
+Recommendations:
+- Recheck levels in 3 months after initiating supplementation
+- Consider referral to nutritionist for dietary optimization
+- Follow up on iron status with additional iron studies if symptoms persist

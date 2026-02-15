@@ -1,0 +1,17 @@
+Vitamin D and vitamin K2 are fat-soluble vitamins that play complementary roles in calcium metabolism and skeletal health. While vitamin D primarily increases intestinal calcium absorption, vitamin K2 regulates the distribution and utilization of calcium within the body. Their interaction is increasingly recognized as important for maintaining bone integrity while minimizing inappropriate calcium deposition in soft tissues.
+
+Vitamin D3 (cholecalciferol) is converted in the liver to 25-hydroxyvitamin D and subsequently in the kidneys to the biologically active form, calcitriol. Active vitamin D enhances intestinal absorption of calcium and phosphorus and supports bone mineralization. However, increased calcium absorption alone does not ensure proper calcium placement within bone tissue.
+
+Vitamin K2 functions as a cofactor for the enzyme γ-glutamyl carboxylase, which activates vitamin K–dependent proteins. Two key proteins influenced by K2 are osteocalcin and matrix Gla protein (MGP). Osteocalcin promotes binding of calcium to the bone matrix, while MGP inhibits calcium deposition in arterial walls and soft tissues. Without sufficient vitamin K2, these proteins remain undercarboxylated and less biologically active.
+
+Theoretical and observational concerns arise when high doses of vitamin D are taken without adequate vitamin K2 intake. Increased calcium absorption combined with insufficient activation of calcium-directing proteins may contribute to calcium accumulation outside skeletal tissue. Although definitive causal evidence remains under investigation, some studies associate imbalance between vitamin D and K status with vascular calcification risk markers.
+
+Dietary sources of vitamin D include fatty fish, fortified dairy products, and sunlight-induced skin synthesis. Vitamin K2 is less widely available in typical Western diets and is primarily found in fermented foods such as natto, certain cheeses, and animal products from grass-fed animals. Vitamin K1 (phylloquinone), abundant in leafy greens, participates mainly in blood coagulation and converts inefficiently to K2 in humans.
+
+Supplemental vitamin D is typically provided as vitamin D3 due to higher efficacy in raising serum 25(OH)D levels compared with vitamin D2 (ergocalciferol). Vitamin K2 supplements commonly contain either menaquinone-4 (MK-4) or menaquinone-7 (MK-7). MK-7 has a longer half-life and produces more stable blood concentrations with once-daily dosing.
+
+No universally accepted dosing ratio exists, but clinical practice commonly pairs 1000–2000 IU of vitamin D3 with approximately 90–200 micrograms of vitamin K2 (usually MK-7). Higher vitamin D intakes may warrant proportionally higher K2 intake, though standardized guidelines are limited.
+
+Individuals taking anticoagulant medications such as warfarin must exercise caution with vitamin K supplementation due to its role in coagulation pathways. Medical supervision is recommended before combining supplements in these cases.
+
+In summary, vitamin D enhances calcium absorption, whereas vitamin K2 directs calcium toward bone and away from soft tissues. Adequate intake of both nutrients may support balanced calcium metabolism, particularly during long-term vitamin D supplementation.

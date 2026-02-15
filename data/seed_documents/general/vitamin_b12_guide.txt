@@ -1,0 +1,9 @@
+Vitamin B12 Guide
+
+Vitamin B12 (cobalamin) is crucial for nerve function, red blood cell formation, and DNA synthesis. The RDA is 2.4 mcg for adults. Deficiency is common in vegetarians, vegans, and older adults due to reduced absorption.
+
+Symptoms of B12 deficiency include fatigue, weakness, numbness in extremities, and cognitive difficulties. B12 is found naturally in animal products: meat, fish, dairy, and eggs. Supplementation is available as cyanocobalamin or methylcobalamin. Sublingual tablets and injections are options for those with absorption issues.
+
+Serum B12 below 200 pg/mL indicates deficiency. Methylmalonic acid (MMA) and homocysteine levels can help confirm functional deficiency even when serum B12 appears borderline. Pernicious anemia, an autoimmune condition, impairs B12 absorption and requires lifelong supplementation, often via injection.
+
+B12 is water-soluble and generally considered safe even at high doses, as excess is excreted in urine. Fortified foods such as nutritional yeast, plant milks, and breakfast cereals can help vegetarians and vegans meet their daily requirements. Older adults may benefit from supplementation regardless of diet due to age-related decline in stomach acid production.

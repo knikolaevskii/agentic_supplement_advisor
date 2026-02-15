@@ -1,0 +1,13 @@
+Vitamin K is a fat-soluble vitamin essential for blood coagulation and regulation of calcium metabolism. It exists primarily as vitamin K1 (phylloquinone), found in plant foods, and vitamin K2 (menaquinones), produced by bacteria and present in fermented foods and animal products. Vitamin K acts as a cofactor for gamma-carboxylation of proteins involved in clotting and bone mineralization.
+
+The adequate intake (AI) for adults is 120 µg/day for men and 90 µg/day for women. Deficiency is uncommon but may occur in individuals with fat malabsorption, prolonged antibiotic use, or chronic gastrointestinal disease.
+
+Signs of deficiency include easy bruising, prolonged bleeding, and impaired clotting. Subclinical deficiency may contribute to reduced bone mineral density due to impaired activation of osteocalcin.
+
+Dietary sources of vitamin K1 include leafy green vegetables such as spinach, kale, broccoli, and Brussels sprouts. Vitamin K2 is found in fermented foods (natto), cheese, egg yolks, and certain meats.
+
+Supplement forms include phylloquinone (K1) and menaquinone-7 (MK-7), a long-acting K2 form. Typical supplementation ranges from 90–200 µg daily depending on dietary intake and clinical goals.
+
+Vitamin K has significant interactions with anticoagulant medications such as warfarin. Consistent intake is essential to maintain stable anticoagulation. Sudden increases or decreases in vitamin K consumption may alter medication effectiveness.
+
+Older adults, individuals with osteoporosis risk, and those with limited vegetable intake may benefit from assessment of intake patterns. Pregnant individuals generally meet requirements through diet, though monitoring may be required in malabsorption conditions.

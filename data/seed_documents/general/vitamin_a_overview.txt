@@ -1,0 +1,13 @@
+Vitamin A refers to a group of fat-soluble compounds including retinol, retinal, retinoic acid, and provitamin A carotenoids such as beta-carotene. It plays essential roles in vision, immune regulation, epithelial tissue maintenance, cellular differentiation, and reproductive health. Retinal is required for phototransduction in the retina, while retinoic acid regulates gene expression influencing growth and immune function.
+
+The recommended dietary allowance (RDA) for adults is 900 µg retinol activity equivalents (RAE) per day for men and 700 µg RAE for women. Vitamin A status depends on liver stores and dietary intake. Deficiency is uncommon in developed regions but may occur with malabsorption disorders, chronic liver disease, or severely restricted diets.
+
+Early deficiency signs include impaired dark adaptation (night blindness), followed by xerophthalmia, dry skin, and increased susceptibility to infections due to compromised mucosal barriers. Severe deficiency may lead to corneal damage and vision loss.
+
+Preformed vitamin A (retinol) is found in animal products including liver, dairy products, eggs, and fortified foods. Provitamin A carotenoids are abundant in carrots, sweet potatoes, spinach, kale, and other orange or dark green vegetables. Conversion efficiency from carotenoids varies among individuals.
+
+Supplement forms include retinyl palmitate, retinyl acetate, and beta-carotene. Typical supplemental doses range from 700–900 µg RAE daily when dietary intake is insufficient. Chronic intake above the tolerable upper intake level (UL) of 3,000 µg RAE per day may result in toxicity, characterized by headache, liver abnormalities, bone pain, and teratogenic effects.
+
+Vitamin A interacts with retinoid medications such as isotretinoin, increasing toxicity risk. Excess intake may also contribute to reduced bone density when combined with low vitamin D status.
+
+Pregnant individuals require adequate intake but should avoid excessive preformed vitamin A due to teratogenic potential. Older adults and individuals with fat-malabsorption syndromes may require monitoring. Vegans rely primarily on carotenoid sources, which may provide variable conversion to active retinol.

@@ -1,0 +1,36 @@
+Patient: Default User
+Date: 2024-11-15
+Facility: City Health Lab
+Test: Annual Blood Panel
+
+Complete Blood Count (CBC):
+  Hemoglobin: 13.2 g/dL (Reference: 12.0-17.5)
+  Hematocrit: 39.8% (Reference: 36-50%)
+  White Blood Cells: 6.2 x10^3/uL (Reference: 4.5-11.0)
+  Platelets: 245 x10^3/uL (Reference: 150-400)
+
+Metabolic Panel:
+  Glucose (fasting): 92 mg/dL (Reference: 70-100)
+  Calcium: 9.4 mg/dL (Reference: 8.5-10.5)
+  Sodium: 140 mEq/L (Reference: 136-145)
+  Potassium: 4.1 mEq/L (Reference: 3.5-5.0)
+
+Vitamin and Mineral Levels:
+  Vitamin D (25-OH): 22 ng/mL (Reference: 30-100) — LOW
+  Vitamin B12: 310 pg/mL (Reference: 200-900)
+  Ferritin: 28 ng/mL (Reference: 30-400) — LOW
+  Iron: 55 mcg/dL (Reference: 60-170) — LOW
+  Folate: 12.5 ng/mL (Reference: >3.0)
+
+Lipid Panel:
+  Total Cholesterol: 195 mg/dL (Reference: <200)
+  HDL: 52 mg/dL (Reference: >40)
+  LDL: 118 mg/dL (Reference: <130)
+  Triglycerides: 125 mg/dL (Reference: <150)
+
+Thyroid:
+  TSH: 2.8 mIU/L (Reference: 0.4-4.0)
+
+Notes: Patient shows low vitamin D and borderline low iron/ferritin levels.
+Recommend vitamin D supplementation (2000 IU daily) and iron supplementation.
+Follow-up labs in 3 months to reassess levels.

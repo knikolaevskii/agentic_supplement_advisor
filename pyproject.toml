@@ -1,0 +1,38 @@
+[project]
+name = "supplement-advisor"
+version = "0.1.0"
+description = "Agentic Vitamin & Supplement Advisor MVP"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "langchain",
+    "langgraph",
+    "langchain-community",
+    "langchain-openai",
+    "langsmith",
+    "chromadb",
+    "streamlit",
+    "tavily-python",
+    "python-multipart",
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+    "pypdf",
+    "langgraph-cli[inmem]>=0.1.0",
+    "langgraph-checkpoint-sqlite",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*", "ui*", "data*"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+

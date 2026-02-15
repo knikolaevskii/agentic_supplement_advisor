@@ -1,0 +1,11 @@
+.venv
+.env
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/chroma/
+data/*.db
+*.pckl
+langgraph.json
+.DS_Store
