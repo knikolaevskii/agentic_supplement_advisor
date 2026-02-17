@@ -1,4 +1,5 @@
 # Agentic Supplement Advisor
+![Demo](./demo/demo.gif)
 
 An AI-powered vitamin and supplement advisor that combines RAG over a general knowledge base with personal health data analysis. Users can ask health questions, upload personal documents (lab results, prescriptions), and search for purchase links — all routed through an intent-classifying agent pipeline.
 
