@@ -7,3 +7,10 @@ Symptoms of B12 deficiency include fatigue, weakness, numbness in extremities, a
 Serum B12 below 200 pg/mL indicates deficiency. Methylmalonic acid (MMA) and homocysteine levels can help confirm functional deficiency even when serum B12 appears borderline. Pernicious anemia, an autoimmune condition, impairs B12 absorption and requires lifelong supplementation, often via injection.
 
 B12 is water-soluble and generally considered safe even at high doses, as excess is excreted in urine. Fortified foods such as nutritional yeast, plant milks, and breakfast cereals can help vegetarians and vegans meet their daily requirements. Older adults may benefit from supplementation regardless of diet due to age-related decline in stomach acid production.
+
+Supplementation for Deficiency:
+- Deficiency (<200 pg/mL): 1,000-2,000 mcg daily sublingual methylcobalamin or cyanocobalamin for 1-3 months, then maintenance of 500-1,000 mcg daily.
+- Severe deficiency (<150 pg/mL): may require intramuscular injections initially, consult physician.
+- Best forms: methylcobalamin (active form) or cyanocobalamin (most studied). Sublingual tablets bypass absorption issues.
+- Special note: metformin users, elderly, and those with pernicious anemia may need higher doses or injections.
+- Target level: 400-600 pg/mL.

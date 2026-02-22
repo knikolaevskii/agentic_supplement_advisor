@@ -19,6 +19,21 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _join_chunks_without_overlap(chunks: list[str]) -> str:
+    """Join chunk texts, removing overlapping regions between consecutive chunks."""
+    if not chunks:
+        return ""
+    result = chunks[0]
+    for i in range(1, len(chunks)):
+        max_overlap = min(len(result), len(chunks[i]), 200)
+        overlap = 0
+        for j in range(1, max_overlap + 1):
+            if result[-j:] == chunks[i][:j]:
+                overlap = j
+        result += chunks[i][overlap:]
+    return result
+
+
 class VectorStoreService:
     """Thin wrapper around ChromaDB that enforces general / personal separation."""
 
@@ -194,7 +209,7 @@ class VectorStoreService:
             include=["documents"],
         )
         texts = results.get("documents", [])[:max_chunks]
-        return "\n\n".join(texts)
+        return _join_chunks_without_overlap(texts)
 
     def clear_collection(
         self,

@@ -71,9 +71,10 @@ class TestHealthGeneralFlow:
         store.add_documents(chunks, collection_type="general")
 
         router_llm = _mock_llm("health_general")
-        # Pipeline: rephrase → filter → gap_detect → generate
+        # Pipeline: plan → filter → gap_detect → generate
         nodes_llm = _mock_llm_multi(
-            "vitamin D benefits and health effects",    # rephrase
+            '[{"query": "vitamin D benefits and health effects", '
+            '"collection": "general", "reason": "general vitamin D info"}]',  # plan
             "KEEP\nKEEP",                               # filter
             "SUFFICIENT",                               # gap detection
             "Vitamin D supports calcium absorption [1]. "
@@ -149,9 +150,10 @@ class TestHealthPersonalFlow:
         )
 
         router_llm = _mock_llm("health_personal")
-        # Pipeline: rephrase → filter → gap_detect → generate
+        # Pipeline: plan → filter → gap_detect → generate
         nodes_llm = _mock_llm_multi(
-            "iron level status from lab results",       # rephrase
+            '[{"query": "iron level status from lab results", '
+            '"collection": "personal", "reason": "personal lab data"}]',  # plan
             "KEEP\nKEEP",                               # filter
             "SUFFICIENT",                               # gap detection
             "Based on your lab results, your iron level is low [1]. "
@@ -286,9 +288,10 @@ class TestMessagesBasedFlow:
         store.add_documents(chunks, collection_type="general")
 
         router_llm = _mock_llm("health_general")
-        # Pipeline: rephrase → filter → gap_detect → generate
+        # Pipeline: plan → filter → gap_detect → generate
         nodes_llm = _mock_llm_multi(
-            "vitamin D health benefits",                # rephrase
+            '[{"query": "vitamin D health benefits", '
+            '"collection": "general", "reason": "general info"}]',  # plan
             "KEEP",                                     # filter
             "SUFFICIENT",                               # gap detection
             "Vitamin D is great for bone health [1].",  # generate
@@ -347,13 +350,15 @@ class TestCheckpointerFlow:
         store.add_documents(chunks, collection_type="general")
 
         router_llm = _mock_llm("health_general")
-        # Each turn: rephrase → filter → gap_detect → generate (8 calls for 2 turns)
+        # Each turn: plan → filter → gap_detect → generate (8 calls for 2 turns)
         nodes_llm = _mock_llm_multi(
-            "vitamin D health benefits",        # turn 1: rephrase
+            '[{"query": "vitamin D health benefits", '
+            '"collection": "general", "reason": "general info"}]',  # turn 1: plan
             "KEEP",                             # turn 1: filter
             "SUFFICIENT",                       # turn 1: gap detection
             "Vitamin D helps with bones.",      # turn 1: generate
-            "vitamin D recommended daily dose", # turn 2: rephrase
+            '[{"query": "vitamin D recommended daily dose", '
+            '"collection": "general", "reason": "dosage info"}]',   # turn 2: plan
             "KEEP",                             # turn 2: filter
             "SUFFICIENT",                       # turn 2: gap detection
             "Vitamin D helps with bones.",      # turn 2: generate
@@ -407,11 +412,12 @@ class TestCheckpointerFlow:
 
 
 class TestHealthCombinedFlow:
-    def test_combined_retrieves_from_both_kbs(self, store: VectorStoreService) -> None:
-        """HEALTH_COMBINED intent retrieves from both general and personal KBs."""
+    def test_combined_two_phase_retrieval(self, store: VectorStoreService) -> None:
+        """HEALTH_COMBINED uses two-phase retrieval: personal first, then targeted general."""
         # Seed general KB.
         general_chunks = _make_chunks("vitd_guide", [
             "Vitamin D recommended intake is 600-800 IU for most adults",
+            "Severe deficiency (<20 ng/mL): 5,000-10,000 IU daily for 8-12 weeks",
         ])
         store.add_documents(general_chunks, collection_type="general")
 
@@ -424,13 +430,15 @@ class TestHealthCombinedFlow:
         )
 
         router_llm = _mock_llm("health_combined")
-        # Pipeline: rephrase → filter → gap_detect → generate
+        # Pipeline: plan → execute → analyze_and_replan → execute_targeted → filter → gap_detect → generate
         nodes_llm = _mock_llm_multi(
-            "vitamin D supplementation based on lab results",  # rephrase
-            "KEEP\nKEEP",                                      # filter
-            "SUFFICIENT",                                      # gap detection
+            '[{"query": "vitamin D lab results level", '
+            '"collection": "personal", "reason": "personal vitamin D data"}]',  # plan (personal only)
+            '["Vitamin D: 22 ng/mL (LOW)"]',               # analyze: extract findings
+            "KEEP\nKEEP",                                   # filter
+            "SUFFICIENT",                                   # gap detection
             "Your vitamin D is low at 22 ng/mL [1]. "
-            "The recommended intake is 600-800 IU [2].",       # generate
+            "The recommended intake is 600-800 IU [2].",    # generate
         )
 
         with (
@@ -451,6 +459,12 @@ class TestHealthCombinedFlow:
         assert result["intent"] is IntentType.HEALTH_COMBINED
         assert "vitamin D" in result["response"].lower() or "vitamin d" in result["response"].lower()
         assert len(result["citations"]) > 0
+        # Phase 2 should have extracted findings.
+        assert result.get("personal_findings") == ["Vitamin D: 22 ng/mL (LOW)"]
+        # Targeted plan should have created a general query for vitamin D.
+        targeted = result.get("targeted_plan", [])
+        assert len(targeted) >= 1
+        assert targeted[0]["collection"] == "general"
 
 
 # ── 10. Clarification flow ──────────────────────────────────────────
@@ -460,7 +474,7 @@ class TestClarificationFlow:
     def test_health_clarification(self) -> None:
         """Vague health question triggers clarification instead of retrieval."""
         router_llm = _mock_llm("health_general")
-        # Rephrase detects ambiguity
+        # Plan retrieval detects ambiguity
         nodes_llm = _mock_llm(
             "CLARIFY: Could you tell me which supplement or health topic you're interested in?"
         )
@@ -523,11 +537,12 @@ class TestFilterRelevanceFlow:
         store.add_documents(chunks, collection_type="general")
 
         router_llm = _mock_llm("health_general")
-        # Pipeline: rephrase → filter → gap_detect → generate
+        # Pipeline: plan → filter → gap_detect → generate
         # ChromaDB returns chunks in similarity order (unpredictable with
         # real embeddings), so we drop the last chunk regardless of content.
         nodes_llm = _mock_llm_multi(
-            "vitamin D benefits and dosage",    # rephrase
+            '[{"query": "vitamin D benefits and dosage", '
+            '"collection": "general", "reason": "general info"}]',  # plan
             "KEEP\nKEEP\nDROP",                # filter: drop last chunk
             "SUFFICIENT",                       # gap detection
             "Vitamin D supports bones [1]. Recommended intake is 600-800 IU [2].",

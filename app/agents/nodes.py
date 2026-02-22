@@ -6,9 +6,11 @@ update dict that LangGraph merges back into state.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Annotated, TypedDict
+from urllib.parse import urlparse
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -45,6 +47,10 @@ class ChatState(TypedDict, total=False):
     clarification_question: str | None
     user_location: str | None
     knowledge_gap: str | None
+    retrieval_plan: list[dict] | None
+    # ── Two-phase HEALTH_COMBINED fields ──
+    personal_findings: list[str] | None
+    targeted_plan: list[dict] | None
 
 
 # ── Backward-compat helpers ──────────────────────────────────────────
@@ -98,45 +104,65 @@ def _get_llm() -> ChatOpenAI:
 
 # ── Prompts ──────────────────────────────────────────────────────────
 
-_REPHRASE_SYSTEM_PROMPT = """\
-You are a query optimizer for a vitamin and supplement knowledge base.
-Rewrite the user's message into a standalone, search-optimized query.
+_PLAN_RETRIEVAL_PROMPT = """\
+You are a retrieval planner for a vitamin and supplement knowledge base.
+Given a user's question, create a plan of 1-3 targeted search queries
+to retrieve the most relevant information.
 
 The user's question has been classified as: {intent}
 The user has personal documents uploaded: {has_personal_data}
 
 Rules:
+- Each query should target a specific aspect of the user's question.
 - Resolve pronouns and references using the conversation history.
 - Expand abbreviations (e.g. "vit D" → "vitamin D").
-- Keep the query concise (1-2 sentences).
+- Make each query search-optimized (concise, specific terms).
+- Assign each query to the correct collection:
+  - "general": shared knowledge base (supplement guides, dosage info, interactions)
+  - "personal": user's uploaded documents (lab results, prescriptions, health records)
 
-Intent-specific rules:
-- For health_personal questions: the user is asking about their own uploaded
-  health data. Do NOT ask for clarification about what they mean by "my results"
-  or "my labs". Rephrase the query to search their personal document collection
-  effectively.
+Intent-specific collection rules:
+- health_general: use "general" collection ONLY.
+- health_personal: use "personal" collection ONLY.
+- health_combined: ONLY create queries for the "personal" collection in this
+  initial plan. General knowledge queries will be created in a separate step
+  after analyzing the personal data. Focus on retrieving the user's health
+  records, lab results, and any personal health data.
+  Example for "What supplements should I take based on my labs?":
+  [{{"query": "lab results vitamin mineral deficiency levels", "collection": "personal", "reason": "identify deficiencies"}}]
+
+For health_personal and health_combined intents:
+- Do NOT ask for clarification about "my results", "my labs", etc.
+- The user is asking about their own uploaded health data.
+- Create queries to search their personal documents effectively.
   Examples:
-    "what are my lab results?" → "lab results vitamin levels blood test values"
-    "what did my doctor recommend?" → "doctor recommendations treatment plan"
-    "what are my dietary restrictions?" → "dietary restrictions allergies diet"
-- For health_combined questions: rephrase to cover both personal data retrieval
-  and general knowledge lookup.
-- Only use CLARIFY for genuinely vague messages like "help" or "supplements"
-  with no context at all. Questions that reference "my", "mine", or personal
-  data should NEVER trigger clarification if intent is health_personal or
-  health_combined.
-- If the message is too vague to search (e.g. just "supplements" or "help"),
-  respond with EXACTLY: CLARIFY: followed by a clarifying question.
-  Example: CLARIFY: Could you tell me which supplement or health topic you're interested in?
+    "what are my lab results?" → query "personal" for "lab results vitamin levels blood test values"
+    "what did my doctor recommend?" → query "personal" for "doctor recommendations treatment plan"
 
-Respond with the rewritten query only, or CLARIFY: followed by a question."""
+If the message is too vague to plan retrieval (e.g. just "supplements" or "help"
+with no context at all), respond with EXACTLY:
+CLARIFY: followed by a clarifying question.
+Example: CLARIFY: Could you tell me which supplement or health topic you're interested in?
+
+Otherwise, respond with a JSON array of query objects. Example:
+[
+  {{"query": "vitamin D benefits bone health calcium absorption", "collection": "general", "reason": "general info on vitamin D"}},
+  {{"query": "vitamin D lab results level", "collection": "personal", "reason": "user's vitamin D blood level"}}
+]
+
+Respond with ONLY the JSON array or CLARIFY prefix. No other text."""
 
 _REPHRASE_PURCHASE_SYSTEM_PROMPT = """\
 You are a query optimizer for a supplement product search engine.
 Rewrite the user's message into a standalone product search query.
 
 Rules:
-- Resolve pronouns and references using the conversation history.
+- Always resolve pronouns (it, that, these, them, some) using the
+  conversation history. The search query MUST include the SPECIFIC
+  product name, not a generic supplement search.
+  Example: if the user discussed Vitamin C and then says "where can I
+  buy it?", the query should be "buy Vitamin C supplements [location]",
+  NOT "buy supplements [location]".
 - Include the product/supplement name explicitly.
 - Add "buy" or "purchase" context if not already present.
 - Check conversation history for any mention of the user's location,
@@ -245,8 +271,30 @@ Reference material:
 
 _PURCHASE_SYSTEM_PROMPT = """\
 You are a helpful shopping assistant for vitamins and supplements.
-Present the purchase options clearly with titles and links.
-Do NOT make health claims — only help the user find where to buy."""
+Format purchase results consistently. Always use this structure:
+
+Here are options for purchasing [PRODUCT] in [LOCATION]:
+
+1. **[Store/Product Name]**
+   [Purchase link](URL)
+
+2. **[Store/Product Name]**
+   [Purchase link](URL)
+
+3. **[Store/Product Name]**
+   [Purchase link](URL)
+
+Rules:
+- Always show exactly 3-5 results, no more.
+- Use markdown link format: [Purchase link](URL)
+- Bold the store/product name.
+- Do NOT add follow-up questions like "tell me your preferred form"
+  or "if you want I can narrow it down".
+- Do NOT include paginated URLs (like ?page=5).
+- Do NOT repeat the same store with different URLs.
+- Do NOT make health claims — only help the user find where to buy.
+- Keep it clean and concise — just the links, nothing else.
+- End with a single line: "All links are for reference only, not medical advice.\""""
 
 
 # ── Node functions ───────────────────────────────────────────────────
@@ -271,22 +319,43 @@ def route_intent_node(state: ChatState) -> dict:
     return {"intent": intent}
 
 
-def retrieve_general_node(state: ChatState) -> dict:
-    """Retrieve chunks from the general knowledge base."""
-    store = _get_vectorstore()
-    query = state.get("rephrased_query") or _current_message(state)
-    chunks = store.search(query, collection_type="general", k=5)
-    logger.info("Retrieved %d chunks from general KB", len(chunks))
-    return {"retrieved_chunks": chunks}
+def execute_retrieval_node(state: ChatState) -> dict:
+    """Execute the retrieval plan by running each query against its assigned collection.
 
-
-def retrieve_personal_node(state: ChatState) -> dict:
-    """Retrieve chunks from the user's personal knowledge base."""
+    Reads ``retrieval_plan`` from state (set by :func:`plan_retrieval_node`)
+    and searches the appropriate ChromaDB collection for each step.
+    Results are merged and deduplicated by ``chunk_id``.
+    """
+    plan = state.get("retrieval_plan") or []
     store = _get_vectorstore()
-    query = state.get("rephrased_query") or _current_message(state)
-    chunks = store.search(query, collection_type="personal", user_id=state["user_id"], k=5)
-    logger.info("Retrieved %d chunks from personal KB", len(chunks))
-    return {"retrieved_chunks": chunks}
+    user_id = state.get("user_id", "")
+
+    all_chunks: list[dict] = []
+    seen_chunk_ids: set[str] = set()
+
+    for step in plan:
+        query = step.get("query", "")
+        collection = step.get("collection", "general")
+
+        if collection == "personal":
+            chunks = store.search(
+                query, collection_type="personal", user_id=user_id, k=5,
+            )
+        else:
+            chunks = store.search(query, collection_type="general", k=5)
+
+        for chunk in chunks:
+            chunk_id = chunk.get("metadata", {}).get("chunk_id", "")
+            if chunk_id and chunk_id in seen_chunk_ids:
+                continue
+            if chunk_id:
+                seen_chunk_ids.add(chunk_id)
+            all_chunks.append(chunk)
+
+    logger.info(
+        "Execute retrieval: %d chunks from %d queries", len(all_chunks), len(plan),
+    )
+    return {"retrieved_chunks": all_chunks}
 
 
 def search_purchase_node(state: ChatState) -> dict:
@@ -514,12 +583,15 @@ def generate_purchase_response_node(state: ChatState) -> dict:
 # ── New pipeline nodes (rephrase / filter / clarify / retrieve_combined) ──
 
 
-def rephrase_query_node(state: ChatState) -> dict:
-    """Rephrase the user's message into a search-optimized standalone query.
+def plan_retrieval_node(state: ChatState) -> dict:
+    """Create a retrieval plan: a list of targeted search queries with collection assignments.
 
-    The classified intent and ``has_personal_data`` flag are injected into
-    the system prompt so the LLM understands the context and avoids
-    unnecessary clarification for personal/combined queries.
+    Replaces the old rephrase + separate-retrieve pattern. A single LLM call
+    produces a JSON array of ``{"query", "collection", "reason"}`` dicts that
+    :func:`execute_retrieval_node` will run against ChromaDB.
+
+    The classified intent and ``has_personal_data`` flag are injected into the
+    prompt so the LLM assigns queries to the correct collection(s).
     """
     user_msg = _current_message(state)
     history = _history_as_dicts(state)
@@ -530,7 +602,7 @@ def rephrase_query_node(state: ChatState) -> dict:
     context_parts = [f"{t['role']}: {t['content']}" for t in history[-6:]]
     context_parts.append(f"user: {user_msg}")
 
-    system_prompt = _REPHRASE_SYSTEM_PROMPT.format(
+    system_prompt = _PLAN_RETRIEVAL_PROMPT.format(
         intent=intent_label,
         has_personal_data=has_personal,
     )
@@ -543,24 +615,149 @@ def rephrase_query_node(state: ChatState) -> dict:
         ])
         text = response.content.strip()
     except Exception:
-        logger.exception("Rephrase failed, using original message")
-        return {"rephrased_query": user_msg, "needs_clarification": False}
+        logger.exception("Plan retrieval failed, falling back to single query")
+        fallback_collection = "personal" if intent is IntentType.HEALTH_PERSONAL else "general"
+        return {
+            "retrieval_plan": [{"query": user_msg, "collection": fallback_collection, "reason": "fallback"}],
+            "needs_clarification": False,
+        }
 
+    # ── CLARIFY protocol ─────────────────────────────────────────────
     if text.startswith("CLARIFY:"):
         # Hard guard: never clarify for personal/combined intents.
-        # The user is clearly asking about their own data; knowledge gap
-        # detection downstream handles missing documents.
         if intent in (IntentType.HEALTH_PERSONAL, IntentType.HEALTH_COMBINED):
-            print(f"[REPHRASE] Suppressing clarification (intent={intent_label})")
+            print(f"[PLAN_RETRIEVAL] Suppressing clarification (intent={intent_label})")
             logger.info("Suppressing clarification for intent %s", intent_label)
-            return {"rephrased_query": user_msg, "needs_clarification": False}
+            fallback_collection = "personal" if intent is IntentType.HEALTH_PERSONAL else "general"
+            return {
+                "retrieval_plan": [{"query": user_msg, "collection": fallback_collection, "reason": "suppressed clarify"}],
+                "needs_clarification": False,
+            }
 
         question = text[len("CLARIFY:"):].strip()
-        logger.info("Rephrase node requests clarification: %s", question)
+        logger.info("Plan retrieval requests clarification: %s", question)
         return {"needs_clarification": True, "clarification_question": question}
 
-    logger.info("Rephrased query: %s", text)
-    return {"rephrased_query": text, "needs_clarification": False}
+    # ── Parse JSON plan ──────────────────────────────────────────────
+    try:
+        plan = json.loads(text)
+        if not isinstance(plan, list) or not plan:
+            raise ValueError("Expected non-empty JSON array")
+    except (json.JSONDecodeError, ValueError):
+        logger.warning("Failed to parse retrieval plan, falling back to single query: %s", text)
+        # Use the raw LLM text as a rephrased query (it may be a plain rewrite).
+        fallback_collection = "personal" if intent is IntentType.HEALTH_PERSONAL else "general"
+        plan = [{"query": text, "collection": fallback_collection, "reason": "parse fallback"}]
+
+    logger.info("Retrieval plan: %d queries", len(plan))
+    return {"retrieval_plan": plan, "needs_clarification": False}
+
+
+_FINDINGS_EXTRACTION_PROMPT = """\
+Analyze these personal health documents. Extract every specific abnormal
+or notable finding as a JSON list of short strings. Include the actual
+values and status (e.g. LOW, HIGH, deficient).
+
+Only include findings relevant to vitamins, supplements, minerals, and
+nutrition. Ignore unrelated medical data.
+
+Documents:
+{documents}
+
+Return ONLY a JSON list. Example:
+["Vitamin D: 14 ng/mL (LOW)", "B12: 165 pg/mL (LOW)", "Iron: 45 mcg/dL (LOW)"]
+
+If no relevant findings are found, return an empty list: []"""
+
+
+def analyze_and_replan_node(state: ChatState) -> dict:
+    """Phase 2 for HEALTH_COMBINED: extract personal findings and create targeted general queries.
+
+    Reads the personal chunks retrieved in phase 1, asks the LLM to extract
+    specific abnormal/notable findings, then creates one targeted general KB
+    query per finding plus an interaction query if multiple supplements are involved.
+    """
+    retrieved = state.get("retrieved_chunks", [])
+    if not retrieved:
+        logger.info("[ANALYZE] No personal chunks to analyze")
+        return {"personal_findings": [], "targeted_plan": []}
+
+    personal_text = "\n".join(
+        c.get("text", c.get("page_content", "")) for c in retrieved
+    )
+
+    # Step 1: Extract findings from personal data.
+    try:
+        llm = _get_llm()
+        response = llm.invoke([
+            SystemMessage(content=_FINDINGS_EXTRACTION_PROMPT.format(documents=personal_text)),
+            HumanMessage(content="Extract the findings."),
+        ])
+        findings = json.loads(response.content.strip())
+        if not isinstance(findings, list):
+            findings = []
+    except (json.JSONDecodeError, Exception):
+        logger.exception("Findings extraction failed, using empty list")
+        findings = []
+
+    print(f"[ANALYZE] Found {len(findings)} findings: {findings}")
+    logger.info("[ANALYZE] Found %d findings", len(findings))
+
+    # Step 2: Create one targeted general query per finding.
+    targeted: list[dict] = []
+    for finding in findings:
+        vitamin_name = finding.split(":")[0].strip()
+        targeted.append({
+            "query": f"{vitamin_name} supplementation dosage deficiency treatment",
+            "collection": "general",
+            "reason": f"targeted info for {finding}",
+        })
+
+    # Step 3: Add interaction query if multiple supplements found.
+    if len(findings) > 1:
+        names = [f.split(":")[0].strip() for f in findings]
+        targeted.append({
+            "query": f"{' '.join(names)} supplement interactions timing",
+            "collection": "general",
+            "reason": "interactions between supplements",
+        })
+
+    print(f"[REPLAN] Created {len(targeted)} targeted queries")
+    logger.info("[REPLAN] Created %d targeted queries", len(targeted))
+
+    return {"personal_findings": findings, "targeted_plan": targeted}
+
+
+def execute_targeted_retrieval_node(state: ChatState) -> dict:
+    """Execute targeted general KB queries and merge with existing personal chunks from phase 1."""
+    plan = state.get("targeted_plan") or []
+    store = _get_vectorstore()
+
+    # Keep existing personal chunks from phase 1.
+    all_chunks: list[dict] = list(state.get("retrieved_chunks") or [])
+    seen_ids: set[str] = {
+        c.get("metadata", {}).get("chunk_id", "")
+        for c in all_chunks
+        if c.get("metadata", {}).get("chunk_id")
+    }
+
+    for step in plan:
+        query = step.get("query", "")
+        results = store.search(query, collection_type="general", k=3)
+        for chunk in results:
+            cid = chunk.get("metadata", {}).get("chunk_id", "")
+            if cid and cid in seen_ids:
+                continue
+            if cid:
+                seen_ids.add(cid)
+            all_chunks.append(chunk)
+
+    print(f"[EXECUTE_TARGETED] Ran {len(plan)} queries, total: {len(all_chunks)} chunks")
+    logger.info(
+        "[EXECUTE_TARGETED] Ran %d queries, total %d chunks",
+        len(plan), len(all_chunks),
+    )
+    return {"retrieved_chunks": all_chunks}
 
 
 def rephrase_purchase_query_node(state: ChatState) -> dict:
@@ -642,14 +839,6 @@ def _extract_location(query: str) -> str | None:
                 return location
     return None
 
-
-def retrieve_combined_node(state: ChatState) -> dict:
-    """Retrieve chunks from both general and personal knowledge bases."""
-    store = _get_vectorstore()
-    query = state.get("rephrased_query") or _current_message(state)
-    chunks = store.search_both(query, user_id=state["user_id"], k=5)
-    logger.info("Retrieved %d chunks from general+personal KB", len(chunks))
-    return {"retrieved_chunks": chunks}
 
 
 def filter_relevance_node(state: ChatState) -> dict:
@@ -748,11 +937,46 @@ def _detect_knowledge_gap(user_msg: str, kept_chunks: list[dict]) -> str | None:
     return None
 
 
+_GENERIC_SEARCH_PATTERNS = re.compile(
+    r"/search\b|/find\b|/browse\b|/results\b", re.IGNORECASE,
+)
+
+
+def _deduplicate_links(links: list[PurchaseLink]) -> list[PurchaseLink]:
+    """Remove duplicate domains, paginated URLs, and generic search pages."""
+    seen_domains: set[str] = set()
+    cleaned: list[PurchaseLink] = []
+
+    for link in links:
+        url = link.url
+
+        # Skip paginated URLs.
+        if "?page=" in url or "&page=" in url:
+            continue
+
+        # Skip generic search/listing pages.
+        if _GENERIC_SEARCH_PATTERNS.search(url):
+            continue
+
+        # Keep only the first link per domain.
+        domain = urlparse(url).netloc.lower()
+        if domain in seen_domains:
+            continue
+        seen_domains.add(domain)
+
+        cleaned.append(link)
+
+    return cleaned
+
+
 def filter_links_node(state: ChatState) -> dict:
-    """Post-search filter: LLM evaluates each purchase link as KEEP or DROP."""
+    """Post-search filter: clean up links, then LLM evaluates relevance."""
     links = state.get("purchase_links", [])
     if not links:
         return {"filtered_links": []}
+
+    # ── Pre-filter: remove junk links before LLM evaluation ──────────
+    links = _deduplicate_links(links)
 
     user_msg = _current_message(state)
     link_texts = []
@@ -771,7 +995,7 @@ def filter_links_node(state: ChatState) -> dict:
         verdicts = response.content.strip().upper().split("\n")
     except Exception:
         logger.exception("Filter links failed, keeping all links")
-        return {"filtered_links": links}
+        return {"filtered_links": links[:5]}
 
     kept = []
     for i, link in enumerate(links):
@@ -783,6 +1007,7 @@ def filter_links_node(state: ChatState) -> dict:
         logger.warning("Filter dropped all links — keeping originals")
         kept = links
 
+    kept = kept[:5]
     logger.info("Filter kept %d / %d links", len(kept), len(links))
     return {"filtered_links": kept}
 

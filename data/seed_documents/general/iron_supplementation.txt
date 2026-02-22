@@ -7,3 +7,12 @@ Heme iron from animal sources (red meat, liver) is better absorbed than non-heme
 Side effects of iron supplementation may include constipation, nausea, and dark stools. Iron bisglycinate (chelated iron) tends to cause fewer gastrointestinal side effects. Taking iron on an empty stomach improves absorption, but taking it with food can reduce stomach upset.
 
 Excessive iron intake can be dangerous, especially in individuals with hereditary hemochromatosis. Serum ferritin is the most useful marker for iron stores; levels below 30 ng/mL suggest depletion, while levels above 200 ng/mL in men or 150 ng/mL in women may indicate overload. Iron supplements should be kept away from children, as accidental overdose can be life-threatening.
+
+Supplementation for Deficiency:
+- Low ferritin (<12 ng/mL): 30-60 mg elemental iron daily or every other day for 3-6 months.
+- Best forms: ferrous bisglycinate (gentle on stomach), ferrous sulfate (most common, cheapest), iron bisglycinate.
+- Take on empty stomach with Vitamin C (200 mg) to enhance absorption by up to 67%.
+- Avoid taking with calcium, dairy, coffee, or tea as they inhibit absorption. Space at least 2 hours apart.
+- Every-other-day dosing may improve absorption and reduce side effects.
+- Target ferritin: 50-100 ng/mL for optimal energy.
+- Recheck ferritin after 3 months.
