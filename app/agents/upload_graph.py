@@ -1,8 +1,8 @@
 """LangGraph upload/ingest agent.
 
-A linear pipeline that extracts text from an uploaded document, chunks it,
-classifies it (general / personal / ambiguous), and ingests the chunks
-into the appropriate vector-store collection.
+A linear pipeline that chunks an uploaded document, classifies it
+(general / personal / ambiguous), and ingests the chunks into the
+appropriate vector-store collection.
 
 If the classification is **AMBIGUOUS** the graph stops early and returns
 ``classification=AMBIGUOUS`` so the API layer can ask the user to choose
@@ -10,9 +10,9 @@ before calling a second ingestion endpoint.
 
 Graph structure::
 
-    START ─> extract ─> chunk ─> classify ─┬─ GENERAL  ─> ingest ─> END
-                                           ├─ PERSONAL ─> ingest ─> END
-                                           └─ AMBIGUOUS ──────────> END
+    START ─> chunk ─> classify ─┬─ GENERAL  ─> ingest ─> END
+                                ├─ PERSONAL ─> ingest ─> END
+                                └─ AMBIGUOUS ──────────> END
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.router import classify_document
 from app.models.schemas import DocClassification
-from app.services.document import extract_text, process_document
+from app.services.document import process_document
 from app.services.vectorstore import VectorStoreService
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,6 @@ class UploadState(TypedDict, total=False):
     file_bytes: bytes
     filename: str
     doc_id: str
-    extracted_text: str
     chunks: list[dict]
     classification: DocClassification | None
     final_classification: str | None
@@ -55,13 +54,6 @@ class UploadState(TypedDict, total=False):
 
 
 # ── Node functions ───────────────────────────────────────────────────
-
-
-def extract_node(state: UploadState) -> dict:
-    """Extract raw text from the uploaded file."""
-    text = extract_text(state["file_bytes"], state["filename"])
-    logger.info("Extracted %d chars from %s", len(text), state["filename"])
-    return {"extracted_text": text}
 
 
 def chunk_node(state: UploadState) -> dict:
@@ -76,8 +68,10 @@ def chunk_node(state: UploadState) -> dict:
 
 def classify_node(state: UploadState) -> dict:
     """Classify the document as general, personal, or ambiguous."""
+    chunks = state.get("chunks", [])
+    text_sample = " ".join(c["text"] for c in chunks)[:1000]
     classification = classify_document(
-        state.get("extracted_text", ""),
+        text_sample,
         state["filename"],
     )
     logger.info("Document %s classified as %s", state["filename"], classification.value)
@@ -123,13 +117,11 @@ def build_upload_graph() -> CompiledStateGraph:
     """Construct and compile the upload/ingest graph."""
     graph = StateGraph(UploadState)
 
-    graph.add_node("extract", extract_node)
     graph.add_node("chunk", chunk_node)
     graph.add_node("classify", classify_node)
     graph.add_node("ingest", ingest_node)
 
-    graph.add_edge(START, "extract")
-    graph.add_edge("extract", "chunk")
+    graph.add_edge(START, "chunk")
     graph.add_edge("chunk", "classify")
     graph.add_conditional_edges(
         "classify",

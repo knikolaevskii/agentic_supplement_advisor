@@ -2,8 +2,82 @@
 
 from __future__ import annotations
 
+import base64
+import re
+
 import requests
 import streamlit as st
+
+
+def _linkify_citations(text: str) -> str:
+    """Replace [N] markers in the response text with clickable anchor links."""
+    return re.sub(
+        r"\[(\d+)\]",
+        r'<a href="#citation-\1" style="text-decoration:none;color:#0068C9;font-weight:600;">[\1]</a>',
+        text,
+    )
+
+
+def _render_citations(citations: list[dict]) -> None:
+    """Render a flat source list with anchor targets for each citation."""
+    if not citations:
+        return
+    st.markdown(
+        '<p style="margin:0.75rem 0 0.25rem;font-weight:600;color:#555;font-size:0.85rem;">Sources</p>',
+        unsafe_allow_html=True,
+    )
+    for i, c in enumerate(citations, 1):
+        page = c.get("page", 1)
+        page_info = f" · p. {page}" if page and page > 1 else ""
+        full = c.get("full_text") or c.get("snippet", "")
+        st.markdown(
+            f'<div id="citation-{i}" style="scroll-margin-top:4rem"></div>',
+            unsafe_allow_html=True,
+        )
+        with st.expander(f"[{i}] {c['title']}{page_info}"):
+            st.markdown(full)
+
+def _render_document(api_base: str, doc_id: str, filename: str, **preview_params) -> None:
+    """Embed the original file if available, else fall back to text preview."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    try:
+        file_resp = requests.get(
+            f"{api_base}/documents/file/{doc_id}",
+            params={"filename": filename},
+            timeout=15,
+        )
+        if file_resp.status_code == 200:
+            if ext == "pdf":
+                b64 = base64.b64encode(file_resp.content).decode()
+                st.markdown(
+                    f'<iframe src="data:application/pdf;base64,{b64}" '
+                    f'width="100%" height="600" style="border:none;border-radius:6px;"></iframe>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                with st.container(height=300):
+                    st.text(file_resp.text)
+            return
+    except Exception:
+        pass
+
+    # Fallback: text preview from vector store
+    try:
+        prev_resp = requests.get(
+            f"{api_base}/documents/preview/{doc_id}",
+            params=preview_params,
+            timeout=10,
+        )
+        prev_resp.raise_for_status()
+        preview = prev_resp.json().get("preview", "")
+        if preview:
+            with st.container(height=300):
+                st.text(preview)
+        else:
+            st.caption("No content available.")
+    except Exception:
+        st.caption("Could not load document.")
+
 
 st.set_page_config(page_title="Supplement Advisor", page_icon="💊")
 
@@ -143,25 +217,11 @@ with tab_chat:
             role = msg.get("role", "user")
             content = msg.get("content", "")
             with st.chat_message(role):
-                st.markdown(content)
-
-                # Show extras stored alongside assistant messages.
                 if role == "assistant":
-                    citations = msg.get("citations", [])
-
-                    if citations:
-                        with st.expander(f"Sources ({len(citations)})"):
-                            for i, c in enumerate(citations, 1):
-                                full = c.get("full_text", "")
-                                if full and full != c["snippet"]:
-                                    with st.expander(f"[{i}] {c['title']} — `{c['source']}`"):
-                                        st.text(full)
-                                else:
-                                    st.markdown(
-                                        f"**[{i}]** {c['title']}  \n"
-                                        f"_{c['snippet']}_  \n"
-                                        f"`{c['source']}`"
-                                    )
+                    st.markdown(_linkify_citations(content), unsafe_allow_html=True)
+                    _render_citations(msg.get("citations", []))
+                else:
+                    st.markdown(content)
 
     # Input form pinned below the messages area.
     with st.form(key="chat_form", clear_on_submit=True):
@@ -209,21 +269,8 @@ with tab_chat:
                         if data.get("conversation_id"):
                             st.session_state.active_conversation_id = data["conversation_id"]
 
-                        st.markdown(reply)
-
-                        if citations:
-                            with st.expander(f"Sources ({len(citations)})"):
-                                for i, c in enumerate(citations, 1):
-                                    full = c.get("full_text", "")
-                                    if full and full != c["snippet"]:
-                                        with st.expander(f"[{i}] {c['title']} — `{c['source']}`"):
-                                            st.text(full)
-                                    else:
-                                        st.markdown(
-                                            f"**[{i}]** {c['title']}  \n"
-                                            f"_{c['snippet']}_  \n"
-                                            f"`{c['source']}`"
-                                        )
+                        st.markdown(_linkify_citations(reply), unsafe_allow_html=True)
+                        _render_citations(citations)
 
                         st.session_state.chat_history.append({
                             "role": "assistant",
@@ -339,20 +386,10 @@ with tab_personal:
         else:
             for doc in docs:
                 with st.expander(doc["filename"]):
-                    try:
-                        prev_resp = requests.get(
-                            f"{api_base}/documents/preview/{doc['doc_id']}",
-                            params={"collection_type": "personal", "user_id": user_id},
-                            timeout=10,
-                        )
-                        prev_resp.raise_for_status()
-                        preview = prev_resp.json().get("preview", "")
-                        if preview:
-                            st.text(preview)
-                        else:
-                            st.caption("No content available.")
-                    except Exception:
-                        st.caption("Could not load preview.")
+                    _render_document(
+                        api_base, doc["doc_id"], doc["filename"],
+                        collection_type="personal", user_id=user_id,
+                    )
 
                     if st.button("Delete", key=f"del_{doc['doc_id']}"):
                         requests.delete(
@@ -386,20 +423,10 @@ with tab_general:
         else:
             for doc in docs:
                 with st.expander(doc["filename"]):
-                    try:
-                        prev_resp = requests.get(
-                            f"{api_base}/documents/preview/{doc['doc_id']}",
-                            params={"collection_type": "general"},
-                            timeout=10,
-                        )
-                        prev_resp.raise_for_status()
-                        preview = prev_resp.json().get("preview", "")
-                        if preview:
-                            st.text(preview)
-                        else:
-                            st.caption("No content available.")
-                    except Exception:
-                        st.caption("Could not load preview.")
+                    _render_document(
+                        api_base, doc["doc_id"], doc["filename"],
+                        collection_type="general",
+                    )
 
     except requests.exceptions.ConnectionError:
         st.warning("Cannot connect to the API. Is the server running?")

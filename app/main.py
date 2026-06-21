@@ -8,10 +8,11 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from langchain_core.messages import AIMessage, HumanMessage
 
 from app.models.schemas import (
@@ -63,6 +64,7 @@ async def lifespan(app: FastAPI):
     vectorstore = VectorStoreService()
 
     os.makedirs("data", exist_ok=True)
+    os.makedirs("data/documents", exist_ok=True)
     conversation_service = ConversationService("data/chats.db")
 
     from langgraph.checkpoint.sqlite import SqliteSaver
@@ -235,6 +237,9 @@ async def upload(user_id: str = Form(...), file: UploadFile = Form(...)):
     # When AMBIGUOUS, pass chunks back so the UI can send them to /upload/confirm.
     chunks = result.get("chunks", []) if classification == "ambiguous" else []
 
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    Path(f"data/documents/{doc_id}.{ext}").write_bytes(file_bytes)
+
     logger.info("Upload complete: doc_id=%s classification=%s", doc_id, classification)
     return UploadResponse(
         doc_id=doc_id,
@@ -340,6 +345,16 @@ async def get_document_preview(doc_id: str, collection_type: str, user_id: str |
     store = _get_vectorstore()
     preview = store.get_document_preview(doc_id, collection_type, user_id=user_id)
     return {"doc_id": doc_id, "preview": preview}
+
+
+@app.get("/documents/file/{doc_id}")
+async def get_document_file(doc_id: str, filename: str):
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    file_path = Path(f"data/documents/{doc_id}.{ext}")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Original file not found")
+    media_type = "application/pdf" if ext == "pdf" else "text/plain"
+    return FileResponse(str(file_path), media_type=media_type, filename=filename)
 
 
 @app.get("/documents/general", response_model=list[DocumentInfo])

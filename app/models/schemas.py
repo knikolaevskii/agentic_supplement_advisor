@@ -36,6 +36,7 @@ class Citation(BaseModel):
     source: str
     snippet: str
     full_text: str = ""
+    page: int = 1
 
 
 class PurchaseLink(BaseModel):

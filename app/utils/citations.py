@@ -42,6 +42,7 @@ def format_citations(
                 source=meta.get("source", ""),
                 snippet=text[:200],
                 full_text=text,
+                page=meta.get("page", 1),
             ),
         )
 
