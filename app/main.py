@@ -328,7 +328,8 @@ async def get_conversation_messages(user_id: str, conversation_id: str):
     if snapshot and snapshot.values and snapshot.values.get("messages"):
         for m in snapshot.values["messages"]:
             role = "assistant" if isinstance(m, AIMessage) else "user"
-            msgs.append(ConversationMessage(role=role, content=m.content))
+            citations = m.additional_kwargs.get("citations", []) if isinstance(m, AIMessage) else []
+            msgs.append(ConversationMessage(role=role, content=m.content, citations=citations))
     return msgs
 
 

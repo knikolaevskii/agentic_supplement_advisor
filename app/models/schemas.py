@@ -84,6 +84,7 @@ class ConversationMessage(BaseModel):
 
     role: str
     content: str
+    citations: list[dict] = Field(default_factory=list)
 
 
 # ── Document upload ──────────────────────────────────────────────────

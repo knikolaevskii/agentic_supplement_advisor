@@ -393,7 +393,7 @@ def generate_response_node(state: ChatState) -> dict:
         reply = _build_gap_only_response(gap, intent)
         result: dict = {"response": reply, "citations": []}
         if use_messages:
-            result["messages"] = [AIMessage(content=reply)]
+            result["messages"] = [AIMessage(content=reply, additional_kwargs={"citations": []})]
         return result
 
     # ── Cases B & C: we have some chunks ──────────────────────────────
@@ -423,7 +423,7 @@ def generate_response_node(state: ChatState) -> dict:
         fallback = "I'm having trouble processing your request right now. Please try again in a moment."
         result = {"response": fallback, "citations": []}
         if use_messages:
-            result["messages"] = [AIMessage(content=fallback)]
+            result["messages"] = [AIMessage(content=fallback, additional_kwargs={"citations": []})]
         return result
 
     reply = response.content
@@ -435,9 +435,10 @@ def generate_response_node(state: ChatState) -> dict:
     # Keep only cited sources and renumber so text and list match.
     reply, used_citations = _renumber_citations(reply, all_citations)
 
+    serialized = [c.model_dump() if hasattr(c, "model_dump") else c for c in used_citations]
     result = {"response": reply, "citations": used_citations}
     if use_messages:
-        result["messages"] = [AIMessage(content=reply)]
+        result["messages"] = [AIMessage(content=reply, additional_kwargs={"citations": serialized})]
     return result
 
 
